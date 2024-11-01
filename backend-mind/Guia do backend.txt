@@ -1,0 +1,8 @@
+Configuração do Back-End (Node.js, Express, TypeScript)
+Estrutura do Projeto: Organize o projeto em pastas para separar rotas, controladores, serviços e configurações.
+Autenticação: Utilize bcrypt para criptografar as senhas e JWT (JSON Web Token) para autenticar as requisições.
+Banco de Dados: Crie um banco MySQL com tabelas para usuários, produtos, estoque e movimentação (caso queira registrar entradas e saídas).
+Modelo de Dados para Produtos:
+id, nome, descrição, imagem (BLOB ou URL para local storage), valor e quantidade (atual no estoque).
+Movimentação de Estoque: Rotas para entrada e saída de produtos, atualizando a quantidade diretamente.
+Dump do Banco: Inclua no repositório um arquivo dump.sql para importação.
