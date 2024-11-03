@@ -1,26 +1,40 @@
-import { Request, Response } from 'express';
-import pool from '../config/database';
-import { RowDataPacket } from 'mysql2';
 import express from 'express';
+
+import {
+  getMercadorias,
+  getMercadoriaById,
+  createMercadoria,
+  updateMercadoria,
+  deleteMercadoria,
+} from '../controllers/mercadorias.controller';
+
 const router = express.Router();
 
-export const getMercadoriaById = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
+// Rota para obter todas as mercadorias
+router.get('/mercadorias', (req: express.Request, res: express.Response) => {
+  getMercadorias(req, res);
+});
 
-    // Certifique-se que o tipo de 'id' está correto (por exemplo, number)
-    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM mercadorias WHERE id_mercadoria = ?', [id]);
+// Rota para obter mercadoria por ID
 
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Mercadoria não encontrada' });
-    }
+router.get('/mercadorias/:id', (req: express.Request, res: express.Response) => {
+  getMercadoriaById(req, res);
+});
 
-   
-    return res.json(rows[0]);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Erro ao buscar mercadoria' });
-  }
-};
+// Rota para criar uma nova mercadoria
+
+router.post('/mercadorias', (req: express.Request, res: express.Response) => {
+  createMercadoria(req, res);
+});
+
+// Rota para atualizar uma mercadoria
+router.put('/mercadorias/:id', (req: express.Request, res: express.Response) => {
+  updateMercadoria(req, res);
+});
+
+// Rota para deletar uma mercadoria
+router.delete('/mercadorias/:id', (req: express.Request, res: express.Response) => {
+  deleteMercadoria(req, res);
+});
 
 export default router;
