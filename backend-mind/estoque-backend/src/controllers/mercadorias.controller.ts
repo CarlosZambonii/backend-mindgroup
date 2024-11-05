@@ -6,7 +6,14 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2';
 export const getMercadorias = async (req: Request, res: Response): Promise<Response> => {
   try {
     const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM mercadorias');
-    return res.json(rows); // Retorna os dados das mercadorias
+    
+    // Converter BLOB para base64 para cada mercadoria
+    const mercadorias = rows.map(mercadoria => ({
+      ...mercadoria,
+      imagens: mercadoria.imagens ? `data:image/jpeg;base64,${mercadoria.imagens.toString('base64')}` : null
+    }));
+
+    return res.json(mercadorias); // Retorna os dados das mercadorias com a imagem em base64
   } catch (error) {
     return res.status(500).json({ message: 'Erro ao buscar mercadorias', error }); // Retorna erro se ocorrer
   }
@@ -18,7 +25,14 @@ export const getMercadoriaById = async (req: Request, res: Response): Promise<Re
     const { id } = req.params; // Pega o ID da mercadoria do parâmetro da requisição
     const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM mercadorias WHERE id_mercadoria = ?', [id]);
     if (rows.length === 0) return res.status(404).json({ message: 'Mercadoria não encontrada' });
-    return res.json(rows[0]); // Retorna a mercadoria encontrada
+    
+    // Converter BLOB para base64
+    const mercadoria = {
+      ...rows[0],
+      imagens: rows[0].imagens ? `data:image/jpeg;base64,${rows[0].imagens.toString('base64')}` : null
+    };
+
+    return res.json(mercadoria); // Retorna a mercadoria encontrada
   } catch (error) {
     return res.status(500).json({ message: 'Erro ao buscar mercadoria', error });
   }
@@ -26,16 +40,29 @@ export const getMercadoriaById = async (req: Request, res: Response): Promise<Re
 
 // Função para criar uma nova mercadoria
 export const createMercadoria = async (req: Request, res: Response): Promise<Response> => {
-  console.log("Dados recebidos:", req.body); // Log dos dados recebidos
+  console.log("Dados recebidos:", req.body);
+  console.log("Arquivo recebido:", req.file);
+
   try {
-      const { codigo, descricao, preco_unitario } = req.body; // Certifique-se de usar o nome correto 'preco_unitario'
-      const [result] = await pool.query<ResultSetHeader>(
-          'INSERT INTO mercadorias (codigo, descricao, preco_unitario) VALUES (?, ?, ?)',
-          [codigo, descricao, preco_unitario] // Use 'preco_unitario' aqui
-      );
-      return res.status(201).json({ message: 'Mercadoria criada com sucesso', id: result.insertId });
+    const { codigo, descricao, preco_unitario, quantidade } = req.body;
+
+    // Verifique se os dados necessários estão presentes
+    if (!codigo || !descricao || isNaN(Number(preco_unitario)) || isNaN(Number(quantidade))) {
+      return res.status(400).json({ message: 'Dados inválidos.' });
+    }
+
+    const imagem = req.file ? req.file.buffer : null; // Obter imagem se existir
+
+    // Insira a mercadoria no banco de dados
+    const [result] = await pool.query<ResultSetHeader>(
+      'INSERT INTO mercadorias (codigo, descricao, preco_unitario, quantidade, imagens) VALUES (?, ?, ?, ?, ?)',
+      [codigo, descricao, parseFloat(preco_unitario), parseInt(quantidade, 10), imagem] // Certifique-se de converter os tipos adequadamente
+    );
+
+    return res.status(201).json({ message: 'Mercadoria criada com sucesso', id: result.insertId });
   } catch (error) {
-      return res.status(500).json({ message: 'Erro ao criar mercadoria', error });
+    console.error("Erro ao criar mercadoria:", error);
+    return res.status(500).json({ message: 'Erro ao criar mercadoria', error });
   }
 };
 
@@ -43,11 +70,14 @@ export const createMercadoria = async (req: Request, res: Response): Promise<Res
 export const updateMercadoria = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { id } = req.params; // Pega o ID da mercadoria do parâmetro da requisição
-    const { codigo, descricao, preco_unitario } = req.body; // Pega os novos dados da mercadoria do corpo da requisição
+    const { codigo, descricao, preco_unitario, quantidade } = req.body; // Pega os novos dados da mercadoria do corpo da requisição
+
+    // Atualiza os dados da mercadoria
     const [result] = await pool.query<ResultSetHeader>(
-      'UPDATE mercadorias SET codigo = ?, descricao = ?, preco_unitario = ? WHERE id_mercadoria = ?',
-      [codigo, descricao, preco_unitario, id]
+      'UPDATE mercadorias SET codigo = ?, descricao = ?, preco_unitario = ?, quantidade = ? WHERE id_mercadoria = ?',
+      [codigo, descricao, preco_unitario, quantidade, id]
     );
+
     if (result.affectedRows === 0) return res.status(404).json({ message: 'Mercadoria não encontrada' });
     return res.json({ message: 'Mercadoria atualizada com sucesso' });
   } catch (error) {
